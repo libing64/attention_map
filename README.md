@@ -137,6 +137,43 @@ python infer_traffic_attention.py \
 - `*_result.json`：识别文本与网格信息
 - `*_heatmap.npy`：未上采样的 `H×W` 权重
 
+## 示例结果
+
+输入为 `assets/traffic_tanker_light.jpg`（道路前视，含罐车 / 货车等）。
+
+**输入图**
+
+<p align="center">
+    <img src="assets/traffic_tanker_light.jpg" width="100%" alt="input traffic scene"/>
+</p>
+
+**识别结果**
+
+```
+1. 半挂车，白色，位于图像左侧远处。
+2. 小型货车，白色，停在道路上，靠近右侧。
+3. 货车，白色和红色相间，位于图像中央偏右，正在行驶。
+4. 皮卡车，黑色，位于图像中间偏左，正驶向远方。
+```
+
+**整体 attention overlay**（全部生成 token 平均，最后 8 层）
+
+<p align="center">
+    <img src="outputs/traffic_tanker_light_attention_overlay.jpg" width="100%" alt="attention overlay"/>
+</p>
+
+**对照面板**（原图 / 整体热力图 / 关键词 token）
+
+<p align="center">
+    <img src="outputs/traffic_tanker_light_attention_panel.jpg" width="100%" alt="attention panel"/>
+</p>
+
+**回答文本**
+
+<p align="center">
+    <img src="outputs/traffic_tanker_light_caption.png" width="100%" alt="caption"/>
+</p>
+
 ## 目录
 
 ```
