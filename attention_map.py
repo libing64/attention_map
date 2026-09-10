@@ -13,24 +13,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-LOCAL_DEPS = ROOT / ".deps"
 
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-
-# transformers>=4.57 lives in .deps so the vllm env's older transformers stay intact.
-if LOCAL_DEPS.is_dir():
-    sys.path.insert(0, str(LOCAL_DEPS))
-
-import transformers.utils.import_utils as _hf_import_utils
-
-_hf_import_utils._accelerate_available = False
-
 import torch
 
 

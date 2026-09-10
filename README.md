@@ -114,7 +114,7 @@ FlashAttention、SDPA、vLLM PagedAttention 为了速度通常**不保留**完�
 
 ## 环境与运行
 
-conda 环境 `vllm` 已升级为 **PyTorch 2.11.0+cu128**，包含 RTX 5060 Ti 所需的 `sm_120`。Qwen3-VL 需要 `transformers>=4.57`，该版本放在本地 `.deps/`，不覆盖环境里给旧 vLLM 预留的 transformers。
+conda 环境 `vllm` 已升级为 **PyTorch 2.11.0+cu128**（含 RTX 5060 Ti 的 `sm_120`）和 **transformers 4.57.1**（含 `Qwen3VLForConditionalGeneration`）。
 
 ```bash
 conda activate vllm
@@ -178,10 +178,9 @@ python attention_map.py \
 
 ```
 attention_map/
-├── attention_map.py   # 推理 + 可视化
+├── attention_map.py             # 推理 + 可视化
 ├── assets/                      # 示例道路图
 ├── models/Qwen3-VL-2B-Instruct  # 本地权重（需自行下载）
-├── .deps/                       # transformers 4.57.1 等（不进 git）
 └── outputs/                     # 运行结果
 ```
 
