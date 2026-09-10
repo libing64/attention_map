@@ -35,6 +35,8 @@ ViT 特征网格  (t, h, w)     ← processor 返回的 image_grid_thw
 LLM 视觉 token  (t, h/2, w/2)  ← 本仓库示例: 1×11×34 = 374
 ```
 
+
+
 ### 2. 跨模态注意力
 
 语言模型的每一层都有因果自注意力。生成第 `q` 个词时，它会对**已经出现过的所有 token**（包括全部视觉 token）算一组权重：
@@ -45,8 +47,8 @@ A[q, k] = softmax_k( Q_q · K_k / √d )
 
 我们关心的是：
 
-- **query `q`**：刚生成的车辆相关 token（或全部生成 token 的平均）
-- **key `k`**：`input_ids == image_token_id` 的那些位置（默认 151655，即 `<|image_pad|>`）
+- **query** `q`：刚生成的车辆相关 token（或全部生成 token 的平均）
+- **key** `k`：`input_ids == image_token_id` 的那些位置（默认 151655，即 `<|image_pad|>`）
 
 把这 374 维权重按 `11×34` reshape，就是一张粗网格热力图，再上采样叠回原图。
 
@@ -72,7 +74,7 @@ FlashAttention、SDPA、vLLM PagedAttention 为了速度通常**不保留**完�
 
 ## 方法
 
-脚本 `infer_traffic_attention.py` 采用两段式，避免在 `generate()` 的每一步都存注意力。
+脚本 `attention_map.py` 采用两段式，避免在 `generate()` 的每一步都存注意力。
 
 ```
 ① 预处理
@@ -96,15 +98,17 @@ FlashAttention、SDPA、vLLM PagedAttention 为了速度通常**不保留**完�
 
 对应代码路径：
 
-| 步骤 | 函数 |
-|------|------|
-| 组 batch | `build_inputs()` |
-| 生成回答 | `generate_text()` |
-| 整段前向取注意力 | `collect_attentions()` |
-| 定位视觉 token | `vision_token_index()` |
-| query→图像权重 | `mean_query_to_vision()` |
-| 网格还原 | `llm_grid()` + `reshape_heatmap()` |
-| 叠图 | `overlay_heatmap()` |
+
+| 步骤         | 函数                                 |
+| ---------- | ---------------------------------- |
+| 组 batch    | `build_inputs()`                   |
+| 生成回答       | `generate_text()`                  |
+| 整段前向取注意力   | `collect_attentions()`             |
+| 定位视觉 token | `vision_token_index()`             |
+| query→图像权重 | `mean_query_to_vision()`           |
+| 网格还原       | `llm_grid()` + `reshape_heatmap()` |
+| 叠图         | `overlay_heatmap()`                |
+
 
 默认平均**最后 8 层**：浅层更偏纹理，后几层更偏语义（「罐车」「卡车」这类词）。关键词 token 的图往往比「全部生成 token 平均」更尖、更好解释。
 
@@ -114,20 +118,22 @@ conda 环境 `vllm` 已升级为 **PyTorch 2.11.0+cu128**，包含 RTX 5060 Ti �
 
 ```bash
 conda activate vllm
-python infer_traffic_attention.py \
+python attention_map.py \
   --image assets/traffic_tanker_light.jpg \
   --out-dir outputs
 ```
 
 常用参数：
 
-| 参数 | 含义 | 默认 |
-|------|------|------|
-| `--image` | 输入图 | `assets/traffic_tanker_light.jpg` |
-| `--prompt` | 识别指令 | 只列看得见的车辆 |
-| `--last-layers` | 平均最后 N 层注意力 | 8 |
-| `--max-pixels` | 限制视觉 token，控制显存 | `512*28*28` |
-| `--alpha` | 热力图混合比例 | 0.45 |
+
+| 参数              | 含义              | 默认                                |
+| --------------- | --------------- | --------------------------------- |
+| `--image`       | 输入图             | `assets/traffic_tanker_light.jpg` |
+| `--prompt`      | 识别指令            | 只列看得见的车辆                          |
+| `--last-layers` | 平均最后 N 层注意力     | 8                                 |
+| `--max-pixels`  | 限制视觉 token，控制显存 | `512*28*28`                       |
+| `--alpha`       | 热力图混合比例         | 0.45                              |
+
 
 输出（`outputs/`）：
 
@@ -137,15 +143,15 @@ python infer_traffic_attention.py \
 - `*_result.json`：识别文本与网格信息
 - `*_heatmap.npy`：未上采样的 `H×W` 权重
 
+
+
 ## 示例结果
 
 输入为 `assets/traffic_tanker_light.jpg`（道路前视，含罐车 / 货车等）。
 
 **输入图**
 
-<p align="center">
-    <img src="assets/traffic_tanker_light.jpg" width="100%" alt="input traffic scene"/>
-</p>
+![input traffic scene](assets/traffic_tanker_light.jpg)
 
 **识别结果**
 
@@ -158,27 +164,21 @@ python infer_traffic_attention.py \
 
 **整体 attention overlay**（全部生成 token 平均，最后 8 层）
 
-<p align="center">
-    <img src="outputs/traffic_tanker_light_attention_overlay.jpg" width="100%" alt="attention overlay"/>
-</p>
+![attention overlay](outputs/traffic_tanker_light_attention_overlay.jpg)
 
 **对照面板**（原图 / 整体热力图 / 关键词 token）
 
-<p align="center">
-    <img src="outputs/traffic_tanker_light_attention_panel.jpg" width="100%" alt="attention panel"/>
-</p>
+![attention panel](outputs/traffic_tanker_light_attention_panel.jpg)
 
 **回答文本**
 
-<p align="center">
-    <img src="outputs/traffic_tanker_light_caption.png" width="100%" alt="caption"/>
-</p>
+![caption](outputs/traffic_tanker_light_caption.png)
 
 ## 目录
 
 ```
 attention_map/
-├── infer_traffic_attention.py   # 推理 + 可视化
+├── attention_map.py   # 推理 + 可视化
 ├── assets/                      # 示例道路图
 ├── models/Qwen3-VL-2B-Instruct  # 本地权重（需自行下载）
 ├── .deps/                       # transformers 4.57.1 等（不进 git）
@@ -192,12 +192,16 @@ modelscope download --model Qwen/Qwen3-VL-2B-Instruct \
   --local_dir models/Qwen3-VL-2B-Instruct
 ```
 
+
+
 ## 常见误区
 
 1. **格子数不是原图像素数。** 必须用 `image_grid_thw / spatial_merge_size` 还原，否则 heatmap 会对不齐。
 2. **亮 ≠ 检测成功。** 注意力是生成该词时的相关区域；2B 模型仍可能把罐车说成货车，但热区仍落在车上。
 3. **vLLM / FlashAttention 画不出这张图。** 它们不返回完整注意力矩阵。
-4. **旧版 `vllm==0.8.1` 引擎与当前 torch 2.11 二进制不兼容。** 本任务走 HuggingFace eager，不调用 `import vllm`。若要重新启用 `vllm serve`，需要安装与 torch 2.11 匹配的 vLLM（约 0.26+）。
+4. **旧版** `vllm==0.8.1` **引擎与当前 torch 2.11 二进制不兼容。** 本任务走 HuggingFace eager，不调用 `import vllm`。若要重新启用 `vllm serve`，需要安装与 torch 2.11 匹配的 vLLM（约 0.26+）。
+
+
 
 ## 参考
 
@@ -205,3 +209,4 @@ modelscope download --model Qwen/Qwen3-VL-2B-Instruct \
 - Qwen2.5-VL: [arXiv:2502.13923](https://arxiv.org/abs/2502.13923)
 - Qwen3 Technical Report: [arXiv:2505.09388](https://arxiv.org/abs/2505.09388)
 - HuggingFace `Qwen3VLForConditionalGeneration`：`output_attentions` 返回文本层 `[batch, heads, seq, seq]`
+
