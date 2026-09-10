@@ -1,0 +1,5 @@
+models/
+outputs/*.pyc 
+outputs/*.json
+__pycache__/
+*.pyc
